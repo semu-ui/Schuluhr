@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Schuluhr">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="description" content="Schlichte Schuluhr mit Lektionenwechseln, Hort und Ferienregelung.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" type="image/png" href="./icon-192.png">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>Schuluhr</title>
+  <style>
+    :root { font-family: Arial, Helvetica, sans-serif; color: #080808; background:#ffffff; }
+    * { box-sizing: border-box; }
+    [hidden] { display:none !important; }
+    html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; }
+    body { background:#fff; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+    .display {
+      width:100%; min-height:100vh; height:100dvh;
+      display:grid; grid-template-rows: 22% 1fr 19%;
+      padding: max(18px, 2.6vh) max(22px, 3.1vw);
+      transition: background-color .55s ease, color .55s ease;
+      background:#fff; color:#050505;
+    }
+    header {
+      min-height:0; display:grid; grid-template-columns: minmax(0, 1fr) 2px minmax(0, 1.1fr);
+      align-items:center; column-gap: clamp(14px, 2.4vw, 38px);
+      border-bottom: min(3px, .26vw) solid #c9c9c9;
+      padding-bottom: .8vh;
+    }
+    .weekday, .date {
+      font-weight:700; white-space:nowrap; line-height:1.04; letter-spacing:-.035em;
+      font-size: min(5.35vw, 7vh);
+    }
+    .weekday { text-align:left; }
+    .date { text-align:right; font-variant-numeric: tabular-nums; }
+    .vertical-divider { width:2px; height:48%; min-height:35px; justify-self:center; background:#bcbcbc; }
+    main { min-height:0; min-width:0; display:flex; justify-content:center; align-items:center; }
+    .clock {
+      line-height:.92; font-weight:750; white-space:nowrap; letter-spacing:-.055em;
+      font-variant-numeric: tabular-nums;
+      font-size: min(30vw, 48vh);
+      transform:translateX(-.02em);
+    }
+    footer {
+      min-width:0; min-height:0; display:flex; align-items:center;
+      border-top: min(3px, .26vw) solid #c9c9c9;
+      padding-top: .6vh;
+    }
+    .event { width:100%; display:flex; align-items:center; justify-content:space-between; gap:2vw; }
+    .event-label, .event-time {
+      font-weight:700; letter-spacing:-.035em; line-height:1.05; white-space:nowrap;
+    }
+    .event-label { font-size: min(4.2vw, 6vh); }
+    .event-time { font-size: min(5.2vw, 7.5vh); font-variant-numeric:tabular-nums; }
+    .event.hort { justify-content:center; }
+    .event.hort .event-label { font-size:min(5.5vw, 8vh); }
+    .display.no-event { grid-template-rows:22% 1fr 6%; }
+    .display.no-event footer { border-top:0; }
+    .display.night { background:#0e0e0e; color:#9a9a9a; grid-template-rows:22% 1fr 6%; }
+    .display.night header { border-color:#343434; }
+    .display.night .vertical-divider { background:#414141; }
+    .display.night footer { border:0; }
+    .display.night .clock { font-weight:500; font-size:min(25vw, 40vh); letter-spacing:-.04em; }
+    .display.night .weekday, .display.night .date { font-weight:500; font-size:min(4.1vw, 5.4vh); }
+    @media (orientation:portrait) {
+      .display { grid-template-rows:16% 1fr 15%; padding: 3.3vh 3.8vw; }
+      .display.no-event,.display.night {grid-template-rows:16% 1fr 6%;}
+      header { column-gap:2.5vw; }
+      .weekday,.date { font-size:min(5.65vw, 5vh); }
+      .clock { font-size:min(30vw, 34vh); }
+      .event-label { font-size:min(4vw,4.5vh); }
+      .event-time { font-size:min(5.4vw,5.4vh); }
+      .event.hort .event-label { font-size:min(6.5vw,5.4vh); }
+      .display.night .clock {font-size:min(25vw, 28vh);}
+      .display.night .weekday,.display.night .date {font-size:min(4.3vw,4.3vh);}
+    }
+    @media (max-width: 570px) {
+      .display {padding:3vh 3vw; grid-template-rows:19% 1fr 18%;}
+      .display.no-event,.display.night {grid-template-rows:19% 1fr 6%;}
+      .weekday,.date {font-size:5.2vw;}
+      .clock {font-size:29.4vw;}
+      .event-label {font-size:4vw;}
+      .event-time {font-size:5.2vw;}
+    }
+    @media (prefers-reduced-motion: reduce) { .display {transition:none;} }
+  </style>
+</head>
+<body>
+  <div class="display no-event" id="display" aria-label="Schuluhr">
+    <header>
+      <div class="weekday" id="weekday">Montag</div>
+      <span class="vertical-divider" aria-hidden="true"></span>
+      <div class="date" id="date">02.11.2026</div>
+    </header>
+    <main><div class="clock" id="clock">14:26</div></main>
+    <footer id="footer" aria-live="off">
+      <div class="event" id="event" hidden>
+        <span class="event-label" id="eventLabel"></span>
+        <span class="event-time" id="eventTime"></span>
+      </div>
+    </footer>
+  </div>
+  <script>
+  'use strict';
+  /*
+   * SCHULUHR – Atelier A
+   * Stand: 02.11.2026
+   * Alle Kalenderdaten lokal im Browser, keine externen APIs / Tracker.
+   * Die Ferienlisten sind bis Ende des Schuljahrs 2032/33 geprüft.
+   * Für spätere Jahre bitte die Feriendaten ergänzen.
+   * Quellen:
+   * https://sh.ch/CMS/Webseite/Schulportal-Kanton-Schaffhausen/Schulorganisation/Schuljahresplanung-1280144-DE.html
+   * https://www.zh.ch/de/bildung/bildungssystem/schulferien.html
+   */
+  const WEEKDAYS = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+
+  // Die Schulferien des Kantons SH ohne Weihnachtsferien.
+  // Die Weihnachtsferien werden separat nach dem verbindlichen ZH-Kalender ergänzt.
+  const HOLIDAYS = [
+    ['Herbstferien', '2026-09-26', '2026-10-18'],
+    ['Sportferien', '2027-01-30', '2027-02-14'],
+    ['Frühlingsferien', '2027-04-17', '2027-05-02'],
+    ['Sommerferien', '2027-07-10', '2027-08-15'],
+    ['Herbstferien', '2027-10-02', '2027-10-24'],
+    ['Sportferien', '2028-01-29', '2028-02-13'],
+    ['Frühlingsferien', '2028-04-14', '2028-05-01'],
+    ['Sommerferien', '2028-07-08', '2028-08-13'],
+    ['Herbstferien', '2028-09-30', '2028-10-22'],
+    ['Sportferien', '2029-01-27', '2029-02-11'],
+    ['Frühlingsferien', '2029-04-14', '2029-05-01'],
+    ['Sommerferien', '2029-07-07', '2029-08-12'],
+    ['Herbstferien', '2029-09-29', '2029-10-21'],
+    ['Sportferien', '2030-01-26', '2030-02-10'],
+    ['Frühlingsferien', '2030-04-13', '2030-04-28'],
+    ['Sommerferien', '2030-07-06', '2030-08-11'],
+    ['Herbstferien', '2030-09-28', '2030-10-20'],
+    ['Sportferien', '2031-01-25', '2031-02-09'],
+    ['Frühlingsferien', '2031-04-12', '2031-04-27'],
+    ['Sommerferien', '2031-07-05', '2031-08-10'],
+    ['Herbstferien', '2031-09-27', '2031-10-19'],
+    ['Sportferien', '2032-01-24', '2032-02-08'],
+    ['Frühlingsferien', '2032-04-10', '2032-04-25'],
+    ['Sommerferien', '2032-07-03', '2032-08-08'],
+    ['Herbstferien', '2032-09-25', '2032-10-17'],
+    ['Sportferien', '2033-01-29', '2033-02-13'],
+    ['Frühlingsferien', '2033-04-16', '2033-05-01'],
+    ['Sommerferien', '2033-07-09', '2033-08-14'],
+
+    // Verbindliche Weihnachtsferien Kanton Zürich:
+    ['Weihnachtsferien (ZH)', '2026-12-21', '2027-01-02'],
+    ['Weihnachtsferien (ZH)', '2027-12-20', '2028-01-01'],
+    ['Weihnachtsferien (ZH)', '2028-12-25', '2029-01-06'],
+    ['Weihnachtsferien (ZH)', '2029-12-24', '2030-01-05'],
+    ['Weihnachtsferien (ZH)', '2030-12-23', '2031-01-05'],
+    ['Weihnachtsferien (ZH)', '2031-12-22', '2032-01-03'],
+    ['Weihnachtsferien (ZH)', '2032-12-20', '2033-01-01'],
+  ];
+
+  // Zusätzliche offiziell vorgesehene schulfreie Tage, ggf. schulintern ergänzen.
+  const EXTRA_FREE_DAYS = new Set([
+    '2027-05-07', // Freitag nach Auffahrt, SJ 2026/27
+  ]);
+
+  function p2(n) { return String(n).padStart(2,'0'); }
+  function localDayKey(date) { return `${date.getFullYear()}-${p2(date.getMonth()+1)}-${p2(date.getDate())}`; }
+  function localDate(date) { return `${p2(date.getDate())}.${p2(date.getMonth()+1)}.${date.getFullYear()}`; }
+  function localTime(date) { return `${p2(date.getHours())}:${p2(date.getMinutes())}`; }
+  function minuteOfDay(date) { return date.getHours()*60 + date.getMinutes(); }
+  function at(h, m) { return 60*h + m; }
+
+  // Gregorianische Osterberechnung nach Meeus/Jones/Butcher.
+  function easterDate(year) {
+    const a=year%19, b=Math.floor(year/100), c=year%100;
+    const d=Math.floor(b/4), e=b%4, f=Math.floor((b+8)/25);
+    const g=Math.floor((b-f+1)/3), h=(19*a+b-d-g+15)%30;
+    const i=Math.floor(c/4), k=c%4, l=(32+2*e+2*i-h-k+7)%7;
+    const m=Math.floor((a+11*h+22*l)/451);
+    const month=Math.floor((h+l-7*m+114)/31);
+    const day=((h+l-7*m+114)%31)+1;
+    return new Date(year, month-1, day, 12);
+  }
+  function plusDays(date, days) {
+    const d=new Date(date.getTime()); d.setDate(d.getDate()+days); return d;
+  }
+  function publicHoliday(date) {
+    const y=date.getFullYear(), key=localDayKey(date);
+    const fixed = new Set([
+      `${y}-01-01`, `${y}-01-02`, // Neujahr und Berchtoldstag (kantonaler dienstfreier Tag)
+      `${y}-05-01`, `${y}-08-01`, `${y}-12-25`, `${y}-12-26`
+    ]);
+    if (fixed.has(key)) return true;
+    const easter=easterDate(y);
+    return [-2, 1, 39, 50].some(offset => localDayKey(plusDays(easter,offset))===key);
+  }
+  function absenceReason(date) {
+    const dow=date.getDay(), key=localDayKey(date);
+    if (dow===0 || dow===6) return 'Wochenende';
+    if (publicHoliday(date)) return 'Feiertag';
+    if (EXTRA_FREE_DAYS.has(key)) return 'Schulfreier Tag';
+    const holiday=HOLIDAYS.find(([,start,end]) => key>=start && key<=end);
+    if (holiday) return holiday[0];
+    if (key<'2026-08-17' || key>'2033-08-14') return 'Ferienkalender nicht hinterlegt';
+    return '';
+  }
+
+  // Intervalle [Start, Ende), auf die Minute genau.
+  // Für Montag, Dienstag, Donnerstag und Freitag.
+  const SCHOOL_DAY = [
+    [at(8, 0),  at(8,30), 'Schulbeginn:', '08:30'],
+    [at(8,30),  at(9,15), 'Lektionenwechsel:', '09:15'],
+    [at(9,15),  at(10,0), 'Pausenbeginn:', '10:00'],
+    [at(10,0),  at(10,30),'Schulbeginn:', '10:30'],
+    [at(10,30), at(11,15),'Lektionenwechsel:', '11:15'],
+    [at(11,15), at(12,0), 'Schulende:', '12:00'],
+    [at(12,0),  at(13,30),'Schulbeginn:', '13:30'],
+    [at(13,30), at(14,15),'Lektionenwechsel:', '14:15'],
+    [at(14,15), at(15,0), 'Schulende:', '15:00'],
+    [at(15,0),  at(17,0), 'Hort', ''],
+  ];
+  const WEDNESDAY = [
+    ...SCHOOL_DAY.slice(0,6),
+    [at(12,0), at(17,0), 'Hort', ''],
+  ];
+  const FRIDAY = [
+    ...SCHOOL_DAY.slice(0,8),
+    [at(14,15), at(15,0), 'Wochenende:', '15:00'],
+    [at(15,0), at(17,0), 'Hort', ''],
+  ];
+
+  function getDisplayState(date) {
+    const m=minuteOfDay(date);
+    const night = m<at(8,0) || m>=at(17,30);
+    const absence = absenceReason(date);
+    const plan = date.getDay()===3 ? WEDNESDAY : date.getDay()===5 ? FRIDAY : SCHOOL_DAY;
+    const event = (!absence && !night) ? plan.find(([start,end])=>m>=start && m<end) : undefined;
+    return {
+      weekday:WEEKDAYS[date.getDay()],
+      date:localDate(date),
+      time:localTime(date),
+      night,
+      label:event?.[2] || '',
+      next:event?.[3] || '',
+      absence,
+    };
+  }
+
+  // Öffentlich lesbare Prüffunktion für lokale Tests; keine Benutzerdaten.
+  window.SCHULUHR = Object.freeze({getDisplayState, HOLIDAYS, EXTRA_FREE_DAYS});
+  const screen = document.getElementById('display');
+  const el = {
+    weekday:document.getElementById('weekday'),
+    date:document.getElementById('date'),
+    time:document.getElementById('clock'),
+    event:document.getElementById('event'),
+    label:document.getElementById('eventLabel'),
+    next:document.getElementById('eventTime'),
+  };
+  function render() {
+    const s=getDisplayState(new Date());
+    el.weekday.textContent=s.weekday;
+    el.date.textContent=s.date;
+    el.time.textContent=s.time;
+    const hasEvent=!!s.label;
+    el.event.hidden=!hasEvent;
+    el.label.textContent=s.label;
+    el.next.textContent=s.next;
+    el.next.hidden=!s.next;
+    el.event.classList.toggle('hort', s.label==='Hort');
+    screen.classList.toggle('night', s.night);
+    screen.classList.toggle('no-event', !hasEvent);
+    document.querySelector('meta[name="theme-color"]').content=s.night ? '#0e0e0e' : '#ffffff';
+  }
+  render();
+  setInterval(render, 1000);
+  document.addEventListener('visibilitychange', render);
+  window.addEventListener('pageshow', render);
+  // Service Worker macht die Web-App nach dem ersten Laden offline nutzbar.
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+    });
+  }
+  </script>
+</body>
+</html>
